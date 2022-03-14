@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            background-color: #5cc0c7;
+            margin: auto;
+            width: 900px;
+            color: #0d212c;
+            margin-top: 10px;
+            text-align: center;
+            margin-bottom: 100px;
+        }
+        select, .btn {
+            background-color: #079bab;
+        }
+        option {
+            background-color: #5cc0c7;
+        }
+        img {
+            width: 880px;
+            max-height: 700px;
+        }
+        iframe {
+            width: 880px;
+            height: 500px;
+        }
+        #firstOptions, #secondOptions {
+            display: inline;
+            margin: 0 10px;
+        }
+        #firstOptions {
+            float: left;
+        }
+        #secondOptions {
+            float: right;
+        }
+        #outputTitle, #outputCopyRight {
+            font-size: 30px;
+            text-align: center;
+        }
+        #outputCopyRight {
+            font-size: 15px;
+        }
+        #outputDesc {
+            text-align: justify;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body onload="dateGenerator()">
+    <div id="mainContainer">
+        <div id="optionsContainer">
+            <div id="firstOptions">
+                From: (MM-DD-YYYY)
+                <select id="fromMM" onchange="monthChange()"></select>
+                <select id="fromDD" onchange="toDateGenerator()"></select>
+                <select id="fromYY" onchange="yearChange()"></select>
+            </div>
+            <div id="secondOptions">
+                To: (MM-DD-YYYY)
+                <select id="toMM" class="toDate" onchange="toMonthChange()"></select>
+                <select id="toDD" class="toDate" onchange="dateValidation()"></select>
+                <select id="toYY" class="toDate" onchange=""></select>
+            </div>
+            <br>
+            <br>
+            <input class="btn" type="button" value="Get Data" id="getData" onclick="sendHTTPRequest()" disabled>
+            <br>
+            <br>
+            <select id="ddDisplay" onchange="outputData()" style="width: 300px;" disabled></select>
+            <hr>
+        </div>
+        <br>
+        <div id="outputTitle" class="outputText"></div>
+        <hr>
+        <div id="outputImage"></div>
+        <hr>
+        <div id="outputDesc" class="outputText"></div>
+        <hr>
+        <div id="outputCopyRight" class="outputText"></div>
+    </div>
+
+    <script>
+        var dataArray = [];
+        var ddDisplay = document.getElementById("ddDisplay");
+        var dTitle = document.getElementById("outputTitle");
+        var dImage = document.getElementById("outputImg");
+        var dDesc = document.getElementById("outputDesc");
+        var dCR = document.getElementById("outputCopyRight");
+        var divOutput = document.getElementById("outputImage");
+
+        var fromMonth = document.getElementById("fromMM");
+        var fromDay = document.getElementById("fromDD");
+        var fromYear = document.getElementById("fromYY");
+
+        var toMonth = document.getElementById("toMM");
+        var toDay = document.getElementById("toDD");
+        var toYear = document.getElementById("toYY");
+
+        var button = document.getElementById("getData");
+        var date = new Date()
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var year = date.getFullYear();
+
+        function outputData() {
+            for (i=0; i<dataArray[0].length; ++i) {
+                if (ddDisplay.selectedIndex == (i + 1)) {
+                    dCR.innerHTML = "<b> Copyright: </b> ";
+                    dTitle.innerHTML = dataArray[0][i].title;
+                    if(dataArray[0][i].media_type == "video"){
+                        divOutput.innerHTML = "";
+                        var frame = document.createElement("iframe");
+                        frame.src = dataArray[0][i].url;
+                        divOutput.appendChild(frame);
+                    }
+                    else {
+                        divOutput.innerHTML = "";
+                        var img = document.createElement("img")
+                        img.src = dataArray[0][i].url;
+                        divOutput.appendChild(img);
+                    }
+                    dDesc.innerHTML = dataArray[0][i].explanation;
+                    if (dataArray[0][i].copyright == undefined){
+                        dCR.innerHTML += "Unknown";
+                    }
+                    else {
+                        dCR.append(dataArray[0][i].copyright);
+                    }
+                    if (dataArray[0][i].explanation == undefined){
+                        dDesc.innerHTML = "Unknown";
+                    }
+                    if (dataArray[0][i].title == undefined){
+                        dTitle.innerHTML = "Unknown";
+                    }
+                    break;
+                }
+            }
+        }
+
+        function createDDSelection(data) { // Try tomorrow and improve validation
+            dataArray.push(data);
+            if (dataArray[0] == undefined) {
+                alert("There\'s no data gathered from \"To Date\" \nThe Page will now Reload", location.reload());
+                ddDisplay.appendChild(document.createElement("option")).appendChild(document.createTextNode("Please select..."));
+                dataArray.shift();
+            }
+            else if (dataArray[0][0] == undefined) {
+                alert("Und");
+                dataArray.shift();
+            }
+            else{
+                ddDisplay.innerHTML = "";
+                ddDisplay.appendChild(document.createElement("option")).appendChild(document.createTextNode("Please select..."));
+                for(i =0; i<dataArray[0].length; ++i) {
+                    ddDisplay.appendChild(document.createElement("option")).appendChild(document.createTextNode(dataArray[0][i].title));
+                }
+            }
+        }
+
+        function toMonthChange(){
+            // If the user changes the month and goes back to the previous month
+            if (fromMonth.value == toMonth.value) {
+                toDateGenerator();
+            }
+            else if (toMonth.value == 2 && toYear.value % 4 == 0) {
+                toDay.innerHTML = "";
+                for (i = 1; i < fromDay.value -1; ++i){
+                    toDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                }
+            }
+            else if (toMonth.value == 2 && toYear.value % 4 != 0) {
+                toDay.innerHTML = "";
+                for (i = 1; i < fromDay.value - 1; ++i){
+                    toDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                    if (i == 28){break}
+                }
+            }
+            else {
+                if ((toMonth.value <= 7 && toMonth.value % 2 != 0 && fromMonth.value != toMonth.value) || (toMonth.value >= 8 && toMonth.value % 2 == 0 && fromMonth.value != toMonth.value)){
+                    toDay.innerHTML = "";
+                    for (i = 1; i < fromDay.value; ++i){
+                        toDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                    }
+                }
+                else if ((toMonth.value <= 7 && toMonth.value % 2 == 0) || (toMonth.value >= 8 && toMonth.value % 2 !=0)){
+                    toDay.innerHTML = "";
+                    for (i = 1; i < fromDay.value - 1; ++i) {
+                    toDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                    }
+                }
+            }
+            button.removeAttribute("disabled");
+            ddDisplay.setAttribute("disabled", "disabled");
+        }
+
+        function toDateGenerator() {
+            var toMonthController = parseInt(fromMonth.value) + 1;
+            toDay.innerHTML = "";
+            toYear.innerHTML ="";
+            toMonth.innerHTML = "";
+            toYear.appendChild(document.createElement("option")).appendChild(document.createTextNode(fromYear.value));
+            for (i = fromDay.value; i <= fromDay.length; ++i){
+                toDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+            }
+            if (fromMonth.value == 12) {
+                toMonth.appendChild(document.createElement("option")).appendChild(document.createTextNode(fromMonth.value));
+            }
+            else {
+                for (i = fromMonth.value; i <= toMonthController; ++i){
+                    toMonth.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                }
+            }
+            button.removeAttribute("disabled");
+            ddDisplay.setAttribute("disabled", "disabled");
+        }
+
+        function monthChange() {
+            if (fromMonth.value == 2 && fromYear.value % 4 == 0) {
+                yearChange();
+            }
+            else if (fromMonth.value == 2) {
+                fromDay.innerHTML = "";
+                for (i = 1; i <= 28; ++i) {
+                    fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                }
+            }
+            else {
+                if ((fromMonth.value <= 7 && fromMonth.value % 2 != 0) || (fromMonth.value >= 8 && fromMonth.value % 2 == 0)){
+                    fromDay.innerHTML = "";
+                    for (i = 1; i <= 31; ++i) {
+                        fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                    }
+                }
+                else if ((fromMonth.value <= 7 && fromMonth.value % 2 == 0) || (fromMonth.value >= 8 && fromMonth.value % 2 !=0)) {
+                    fromDay.innerHTML = "";
+                    for (i = 1; i <= 30; ++i) {
+                        fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                    }
+                }
+                else {
+                    alert("There's an error");
+                }
+            }
+            dateValidation();
+            toDateGenerator();
+            button.removeAttribute("disabled");
+            ddDisplay.setAttribute("disabled", "disabled");
+        }
+
+        function yearChange() {
+            if (fromMonth.value == 2 && fromYear.value % 4 == 0){
+                fromDay.innerHTML = "";
+                alert("You are on a Leap Year!");
+                for(i=1; i<=29; ++i){
+                    fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                }
+            }
+            else if (fromMonth.value ==2 && fromYear.value %4 != 0) {
+                fromDay.innerHTML = "";
+                for(i=1; i<=28; ++i){
+                    fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+                }
+            }
+            dateValidation();
+            toDateGenerator();
+            button.removeAttribute("disabled");
+            ddDisplay.setAttribute("disabled", "disabled");
+        }
+        
+        function dateGenerator() {
+            for(i=1; i<=12; ++i){
+                fromMonth.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+            }
+            for(i=2000; i<=2020; ++i){
+                fromYear.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+            }
+            for (i=1; i <= 31; ++i) {
+                fromDay.appendChild(document.createElement("option")).appendChild(document.createTextNode(i));
+            }
+            fromDay.selectedIndex = day -1;
+            fromMonth.selectedIndex = month -1;
+            fromYear.selectedIndex = year -2000;
+            toDateGenerator();
+        }
+
+        function dateValidation() {
+            if (year <= fromYear.value && month == fromMonth.value || (year <= toYear.value && month == toMonth.value)){
+                if (day < fromDay.value || day < toDay.value){
+                    alert("Invalid date input. The page will now reload", location.reload())
+                }
+            }
+            else if (year <= fromYear.value && month < fromMonth.value || year <= toYear.value && month < toMonth.value) {
+                alert("Invalid date input. The page will now reload", location.reload())
+            }
+        }
+
+        function sendHTTPRequest() {
+            dateValidation();
+            var apiKey = "56Tl288LNjNxwd7CqcM3gVbpZdc6AlSJ5GrzBWN6";
+            var request = new XMLHttpRequest();
+            request.open('get', `https://api.nasa.gov/planetary/apod?api_key=${apiKey}&start_date=${fromYear.value}-${fromMonth.value}-${fromDay.value}&end_date=${toYear.value}-${toMonth.value}-${toDay.value}`);
+            request.onload = () => {
+                if (request.readyState === 4 && request.status === 200) { // checks if the state reached stage 4 & status of 200
+                    var toObjt = JSON.parse(request.responseText); // Converts string into object format
+                }
+                createDDSelection(toObjt);
+            }
+            request.send();
+            dataArray.shift()
+            dTitle.innerHTML = "";
+            dDesc.innerHTML = "";
+            divOutput.innerHTML = "";
+            dCR.innerHTML = "";
+            button.setAttribute("disabled", "disabled");
+            ddDisplay.removeAttribute("disabled");
+        }
+        
+    </script>
+</body>
+</html>
